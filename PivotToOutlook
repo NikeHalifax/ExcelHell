@@ -1,0 +1,115 @@
+Sub PivotTabletoOutlook()
+
+'Declare Outlook Variables.
+Dim oLookApp As outlook.Application
+Dim oLookItm As outlook.MailItem
+Dim oLookIns As outlook.Inspector
+
+'Declare Word Variables
+Dim oWrdDoc As Word.Document
+Dim oWrdRng As Word.Range
+
+'Declare Excel Variables
+Dim PvtTbl As PivotTable
+Dim PvtRng As Range
+Dim FilterRng As Range
+Dim FilterName As Range
+Dim TM As String
+Dim PvtNameField As PivotField
+Dim edress As String
+
+
+'Grab the Active Outlook Application if it exists.
+On Error Resume Next
+
+'Try and grab Active instance.
+Set oLookApp = GetObject(, "Outlook.Application")
+    
+    'If there is an error, create new instance of Outlook.
+    If Err.Number = 429 Then
+        
+        'Clear the error
+        Err.Clear
+        
+        'Create the Outlook App
+        Set oLookApp = New outlook.Application
+        
+    End If
+
+'Grab the Pivot Table Object.
+Set PvtTbl = ThisWorkbook.Worksheets("Data").PivotTables("PivotTable1")
+    Debug.Print PvtTbl.Name
+
+'Grab the Filter Range in the Pivot Table Sheet
+'Set FilterRng = ThisWorkbook.Worksheets("Data").Range("Filter_TM")
+
+'Grab smaller range for testing
+Set FilterRng = ThisWorkbook.Worksheets("Data").Range("K5:K7")
+
+edress = ActiveSheet.Range("K2").Value
+    Debug.Print edress
+
+'Loop through each TM
+For Each FilterName In FilterRng
+
+    'Grab TM name
+    TM = FilterName.Value
+    
+    'Clear all the filters
+    PvtTbl.ClearAllFilters
+    
+    'Grab TM Filed
+    Set PvtNameField = PvtTbl.PivotFields("TM")
+        
+        'Set the Filter
+        PvtNameField.CurrentPage = TM
+    
+    'Grab pivot table range
+    Set PvtRng = PvtTbl.TableRange2
+    'Set PvtRng = PvtTbl.TableRange1
+
+    'Create a new Email
+    Set oLookItm = oLookApp.CreateItem(olMailItem)
+
+
+    'With the new Email
+    With oLookItm
+        .To = edress
+        .Subject = "Pivot Table Report Test"
+        .Body = "Trying to get it to paste"
+    
+        'Display the email
+        .Display
+    
+        'Get the Active Inspector
+        Set oLookIns = .GetInspector
+    
+        'Grab the Word Editor
+        Set oWordDoc = oLookIns.WordEditor
+    
+        'Copy the Pivot Table Range
+        PvtRng.Copy
+    
+        'Pause it for a second or two
+        Application.Wait Now() + #12:00:01 AM#
+    
+        'Define the Range in the Email we want to Paste to the Pivot Table.
+        Set oWrdRng = oWrdDoc.Application.ActiveDocument.Content
+        
+            'Collapse the range.
+            oWrdRng.Collapse Direction:=wdCollapseEnd
+        
+        'Insert a new Paragraph.
+        Set oWrdRng = oWrdDoc.Paragraphs.Add
+        
+            'Make sure there is space between paragraph and content
+            oWrdRng.InsertBreak
+    
+        'Paste pivot table in email
+        oWrdRng.PasteSpecial DataType:=wdPasteOLEObject, Link:=False
+    
+    End With
+
+Next
+
+End Sub
